@@ -6,31 +6,29 @@ Created on Sat Oct 30 16:32:53 2021
 """
 
 import numpy as np
-import onnx
+#import onnx
 import tensorflow as tf
-from onnx import numpy_helper
-import tf2onnx
+#from onnx import numpy_helper
+#import tf2onnx
 
 #load tensorflow model
 model=tf.keras.models.load_model('0-9-A-Z_selva.h5')
 #model1=tf.keras.models.load_model('0-9-A-Z_quant.TFLITE')
 #convert to onnx model
-spec=(tf.TensorSpec((None,20,20,1),tf.float32,name='input'),)
-output_path=model.name+'.onnx'
-onnx_model = tf2onnx.convert.from_keras(model,input_signature=spec,opset=13,output_path=output_path)
+#spec=(tf.TensorSpec((None,20,20,1),tf.float32,name='input'),)
+#output_path=model.name+'.onnx'
+#onnx_model = tf2onnx.convert.from_keras(model,input_signature=spec,opset=13,output_path=output_path)
 #output_names = [n.name for n in onnx_model.graph.output]
-for idx in range(len(model.layers)):
-    a=(model.get_layer(index=idx).name)
-    if a.find('conv2d')!=-1:
-        print('convolution')
-    elif a.find('max_pooling2d')!=-1:
-        print('max_pooling')
-    elif a.find('dense')!=-1:
-        print('fully_connected')
-    else:
-        print(a)
-b=model.layers[0].bias     
-w=model.layers[0].weights 
+ 
+    
+   
+    
+w=model.layers[0].get_weights()
+a=w[0]
+b=w[1]
+aa = np.transpose(a, (3, 2, 0, 1))
+print(aa[0][0])
+print(aa[1][0])
 '''
 #load onnx model
 model_o=onnx.load('sequential.onnx')
