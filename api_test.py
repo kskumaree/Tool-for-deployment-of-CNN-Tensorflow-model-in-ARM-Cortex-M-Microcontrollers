@@ -19,7 +19,7 @@ def fully_connected(bias,weight,x):
         for j in range(len(x[0])):
             # iterating by rows of B
             for k in range(len(x)):
-                result[i][j] += weight[i][k] * x[k][j]
+                result[i] += weight[i][k] * x[k][j]
     return result+bias
 def relu(x):
     r=x.shape 
@@ -84,9 +84,9 @@ def flatten(inp):
     [n_c,n_h,n_w]=inp.shape
     Z=[]
     for w in range(n_w):
-        for h in range(n_h):
-            for c in range(n_c):
-                Z.append(inp[c,h,w])
+        for h in range(n_c):
+            for c in range(n_h):
+                Z.append(inp[w][c][h])
     Z=np.array(Z)
     Z=Z.reshape(len(Z),1)
     return Z
@@ -115,7 +115,8 @@ aa = np.transpose(a, (3, 2, 0, 1))
 conv2_out=conv2d(max_pool1,aa,b,pad,stride)
 conv2_out_relu=relu(conv2_out)
 max_pool2=max_pooling(conv2_out_relu,(2,2),(2,2))
-X=flatten(max_pool2)
+max_poolT = np.transpose(max_pool2, (1,0,2))
+X=flatten(max_poolT)
 w=model.layers[6].get_weights()
 a=w[0]
 b=w[1]
