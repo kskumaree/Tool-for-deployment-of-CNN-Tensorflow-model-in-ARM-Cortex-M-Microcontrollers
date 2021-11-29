@@ -122,3 +122,4 @@ b=w[1]
 b=b.reshape(len(b),1)
 a=np.transpose(a)
 pred=fully_connected(b,a,X)
+ 
