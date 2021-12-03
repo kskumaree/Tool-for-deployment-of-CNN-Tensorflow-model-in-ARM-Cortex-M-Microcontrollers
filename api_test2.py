@@ -90,6 +90,14 @@ def flatten(inp):
     Z=np.array(Z)
     Z=Z.reshape(len(Z),1)
     return Z
+def nextpow2(n):
+    count = 0
+    if (n and not(n & (n - 1))):
+        return n  
+    while( n != 0):
+        n >>= 1
+        count += 1   
+    return 1 << count
 
 model=tf.keras.models.load_model('0-9-A-Z_selva.h5')
 classes=['0','1','2','3','4','5','6','7','8','9','A','B','C','D','H','K','N','R','U','Y','E','P','S','X','F','L','T','Z','G','O','I','J','M','Q','V','W']
@@ -166,6 +174,7 @@ for img1 in imagelist:
     print(digit)
 cl=0
 fc=0
+mp=0
 for idx in range(len(model.layers)):
     a=(model.get_layer(index=idx).name)
     if a.find('conv2d')!=-1:
@@ -174,25 +183,252 @@ for idx in range(len(model.layers)):
         b=w[1]
         b=b.reshape(len(b),1)
         w = np.transpose(a, (3, 2, 0, 1))
-        sa=np.max(maxval[idx])/255
+        sa=nextpow2(math.ceil(np.max(maxval[idx])))/128
         c=w.shape
-        Wq=np.zeros(c)
-        bq=np.zeros((c[0],1))
-        sw=np.zeros((c[0],1))
-        sb=np.zeros((c[0],1))
-        for i in range(c[0]):
-            sw[i]=np.max(np.abs(w[i,:,:,:]))/127
-            sb[i]=sa*sw[i]
-            Wq[i,:,:,:]=np.round(w[i,:,:,:]/sw[i])
-            bq[i]=np.round(b[i]/sb[i])        
+        p=np.max(np.abs(w))
+        if p<1:
+            p=1
+        else:
+            p=nextpow2(math.ceil(p))
+        sw=p/128
+        sb=sa*sw
+        Wq=np.round(w/sw)
+        #bq=np.round(b/sb)
+        bq=np.round(b/sw)
+        left_shift=str(int(math.log(1/sa,2)))
+        sa1=nextpow2(math.ceil(np.max(maxvalout[idx])))/128
+        scale=sb/sa1   
+        right_shift=str(int(math.log(1/scale,2)))
+        layer=model.layers[idx]
+        in_size=layer.input_shape
+        out_size=layer.output_shape
+        ksize=model.get_layer(index=idx).get_config()['kernel_size']
+        k_x=str(ksize[0])
+        k_y=str(ksize[1])
+        x_size=in_size[1]
+        y_size=in_size[2]
+        ch_size=in_size[3]
+        out_x=str(out_size[1])
+        out_y=str(out_size[2])
+        out_ch=str(out_size[3])
+        padsize=model.get_layer(index=idx).get_config()['padding']
+        Stride=model.get_layer(index = idx).get_config()['strides']
+        if padsize=='same':
+            pval=int(math.floor(((x_size-1)*Stride[0]+ksize[0]-x_size)/2))
+        else:
+            pval=0
+        pval=str(pval)
+        stride_x=str(Stride[0])
+        cl=cl+1
+        W="W"
+        und="_"
+        c=","
+        o="{"
+        close="}"
+        x="x"
+        y="y"
+        IN="IN"
+        out="OUT"
+        ch="CH"
+        stride="STRIDE"
+        lshift="LSHIFT"
+        rshift="RSHIFT"
+        null="NULL"
+        pad="PAD"
+        k="KER"
+        Bias="BIAS"
+        conv="CONV"
+        hdef="#define"
+        nxt="\n"
+        sp="\t"
+        con="const"
+        dtype="q7_t"
+        B="b"
+        n=str(cl)
+        fname='conv'+n+'.h'
+        f=open(fname,'w')
+        f.write('#include  '+ "<arm_const_structs.h>"+'\n')
+        f.write('#include  '+ "<arm_nnfunctions.h>"+'\n')
+        f.write(hdef+" "+conv+n+und+IN+und+y+sp+str(y_size)+nxt)
+        f.write(hdef+" "+conv+n+und+IN+und+x+sp+str(x_size)+nxt)
+        f.write(hdef+" "+conv+n+und+IN+und+ch+sp+str(ch_size)+nxt)
+        f.write(hdef+" "+conv+n+und+k+und+x+sp+k_x+nxt)
+        f.write(hdef+" "+conv+n+und+k+und+y+sp+k_y+nxt)
+        f.write(hdef+" "+conv+n+und+pad+und+y+sp+pval+nxt)
+        f.write(hdef+" "+conv+n+und+pad+und+x+sp+pval+nxt)
+        f.write(hdef+" "+conv+n+und+stride+und+y+sp+stride_x+nxt)
+        f.write(hdef+" "+conv+n+und+stride+und+x+sp+stride_x+nxt)
+        f.write(hdef+" "+conv+n+und+Bias+und+lshift+sp+left_shift+nxt)
+        f.write(hdef+" "+conv+n+und+out+und+rshift+sp+right_shift+nxt)
+        f.write(hdef+" "+conv+n+und+out+und+y+sp+out_y+nxt)
+        f.write(hdef+" "+conv+n+und+out+und+x+sp+out_x+nxt)
+        f.write(hdef+" "+conv+n+und+out+und+ch+sp+out_ch+nxt)
+        f.write(con+" "+dtype+" "+B+und+n+"["+conv+n+und+out+und+ch+"]"+"="+o)
+        for ii in range(len(bq)):
+            if(ii==0):
+                f.write(str(int(bq[ii][0])))
+            else:
+                f.write(","+str(int(bq[ii][0])))
+        f.write(close+";"+nxt)
+        f.write(con+" "+dtype+" "+W+und+n+"["+conv+n+und+IN+und+ch+"*"+conv+n+und+k+und+y+"*"+conv+n+und+k+und+x+"*"+conv+n+und+out+und+ch+"]"+"="+o+nxt)
+        p=Wq.shape
+        itr=0
+        flag=0
+        for ii in range(p[0]):
+            for jj in range(p[1]):
+                for kk in range(p[2]):
+                    for ll in range(p[3]):
+                        itr+=1
+                        if(flag==0):
+                            f.write(str(int(Wq[ii,jj,kk,ll])))
+                            flag=1
+                        else:
+                            f.write(","+str(int(Wq[ii,jj,kk,ll])))
+                        if (ii==p[0]-1 and jj==p[1]-1 and kk==p[2]-1 and ll==p[3]-1):
+                            continue
+                        elif itr==100:
+                            f.write(c+nxt)
+                            flag=0
+                            itr=0
+        f.write(close+";"+nxt)
+        f.close()
     elif a.find('dense')!=-1:
-            w=model.layers[idx].get_weights()
-            a=w[0]
-            b=w[1]
-            bf=b.reshape(len(b),1)
-            wf=np.transpose(a)
-            saf=np.max(maxval[idx])/255
-            swf=np.max(np.abs(wf))/127
-            sbf=swf*saf
-            bfq=np.round(bf/sbf)
-            wfq=np.round(wf/swf)
+        w=model.layers[idx].get_weights()
+        a=w[0]
+        b=w[1]
+        bf=b.reshape(len(b),1)
+        wf=np.transpose(a)
+        saf=nextpow2(math.ceil(np.max(maxval[idx])))/128
+        p=np.max(np.abs(wf))
+        if p<1:
+            p=1
+        else:
+            p=nextpow2(math.ceil(p))
+        swf=p/128
+        sbf=swf*saf
+        #bfq=np.round(bf/sbf)
+        bfq=np.round(bf/swf)
+        lshiftf=str(int(math.log(1/saf,2)))
+        wfq=np.round(wf/swf)
+        saf1=nextpow2(math.ceil(np.max(maxvalout[idx])))/128
+        scalef=sbf/saf1
+        rshiftf=str(int(math.log(1/scalef,2)))
+        fc+=1
+        n=str(fc)
+        layer=model.layers[idx]
+        ishape=(layer.input_shape)
+        oshape=(layer.output_shape)
+        ishape=str(ishape[1])
+        oshape=str(oshape[1])
+        weight="wf"
+        IN="IN"
+        ip="IP"
+        out="OUT"
+        d="DIM"
+        B="bf"
+        und="_"
+        c=","
+        o="{"
+        close="}"
+        Bias="BIAS"
+        lshift="LSHIFT"
+        rshift="RSHIFT"
+        hdef="#define"
+        fc="FC"
+        con="const"
+        dtype="q7_t"
+        fname='FC'+n+'.h'
+        sp='\t'
+        f=open(fname,'w')
+        f.write('#include  '+ "<arm_const_structs.h>"+'\n')
+        f.write('#include  '+ "<arm_nnfunctions.h>"+'\n')
+        f.write(hdef+sp+ip+n+und+IN+und+d+sp+ishape+nxt)
+        f.write(hdef+sp+ip+n+und+out+und+d+sp+oshape+nxt)
+        f.write(hdef+sp+ip+n+und+Bias+und+lshift+sp+lshiftf+nxt)
+        f.write(hdef+sp+ip+n+und+out+und+rshift+sp+rshiftf+nxt)
+        f.write(con+' '+dtype+' '+weight+und+n+'['+ip+n+und+out+und+d+'*'+ip+n+und+IN+und+d+']'+'='+o+nxt)
+        pp=wfq.shape
+        flag=0
+        itr=0
+        for ii in range(pp[0]):
+            for jj in range(pp[1]):
+                itr+=1
+                if flag==0:
+                    f.write(str(int(wfq[ii][jj])))
+                    flag=1
+                else:
+                    f.write(c+str(int(wfq[ii][jj])))
+                if (ii==pp[0]-1 and jj==pp[1]-1):
+                    continue
+                elif (itr==100):
+                    flag=0
+                    itr=0
+                    f.write(c+nxt)
+        f.write(close+';'+nxt)
+        f.write(con+' '+dtype+' '+B+und+n+'['+ip+n+und+out+und+d+']'+'='+o+nxt)
+        for ii in range(len(bfq)):
+            if ii==0:
+                f.write(str(int(bfq[ii][0])))
+            else:
+                f.write(c+str(int(bfq[ii][0])))
+        f.write(close+';'+nxt)
+        f.close()
+    elif a.find('max_pooling2d')!=-1:
+        mp+=1
+        hdef="#define"
+        stride="STRIDE"
+        m="MAX"
+        k="KERNEL"
+        x="x"
+        y="y"
+        IN="IN"
+        out="OUT"
+        null="NULL"
+        b2="buffer2"
+        b3="buffer3"
+        Pad="PAD"
+        act="ACT"
+        m1="min"
+        m2="max"
+        ch="CHANNEL"
+        und="_"
+        sp='\t'
+        n=str(mp)
+        Stride=model.get_layer(index=idx).get_config()['strides']
+        pad=model.get_layer(index=idx).get_config()['padding']
+        layer=model.layers[idx]
+        in_size=layer.input_shape
+        out_size=layer.output_shape
+        ksize=model.get_layer(index=idx).get_config()['pool_size']
+        k_x=str(ksize[0])
+        k_y=str(ksize[1])
+        x_size=in_size[1]
+        y_size=in_size[2]
+        ch_size=in_size[3]
+        out_x=str(out_size[1])
+        out_y=str(out_size[2])
+        out_ch=str(out_size[3])
+        stride_x=str(Stride[0])
+        if pad=='same':
+            pval=int(math.floor(((x_size-1)*Stride[0]+ksize[0]-x_size)/2))
+        else:
+            pval=0
+        pval=str(pval)
+        fname='max_pooling'+n+'.h'
+        f=open(fname,'w')
+        f.write('#include  '+ "<arm_const_structs.h>"+'\n')
+        f.write('#include  '+ "<arm_nnfunctions.h>"+'\n')
+        f.write(hdef+sp+m+n+und+IN+und+x+sp+str(x_size)+nxt)
+        f.write(hdef+sp+m+n+und+IN+und+y+sp+str(y_size)+nxt)
+        f.write(hdef+sp+m+n+und+ch+und+'in'+sp+str(ch_size)+nxt)
+        f.write(hdef+sp+m+n+und+out+und+x+sp+out_x+nxt)
+        f.write(hdef+sp+m+n+und+out+und+y+sp+out_y+nxt)
+        f.write(hdef+sp+m+n+und+k+und+x+sp+k_x+nxt)
+        f.write(hdef+sp+m+n+und+k+und+y+sp+k_y+nxt)
+        f.write(hdef+sp+m+n+und+stride+und+x+sp+stride_x+nxt)
+        f.write(hdef+sp+m+n+und+stride+und+y+sp+stride_x+nxt)
+        f.write(hdef+sp+m+n+und+Pad+und+x+sp+pval+nxt)
+        f.write(hdef+sp+m+n+und+Pad+und+y+sp+pval+nxt)
+        f.write(hdef+sp+m+n+und+act+und+m1+sp+str(0)+nxt)
+        f.write(hdef+sp+m+n+und+act+und+m2+sp+str(127)+nxt)
+        f.close()
