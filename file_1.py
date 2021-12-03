@@ -116,16 +116,25 @@ def fully_connected(f,layer):
     f.write(close+";\n")
     
 f=open('inference.c','w')
-s=[]
+model=tf.keras.models.load_model('0-9-A-Z_selva.h5')
+conv=0
+fc=0
+mp=0
+for idx in range(len(model.layers)):
+    a=(model.get_layer(index=idx).name)
+    if a.find('conv2d')!=-1:
+        conv+=1
+        f.write('#include '+'<conv'+str(conv)+'.h>'+'\n')
+    elif a.find('max_pooling2d')!=-1:
+        mp=mp+1
+        f.write('#include '+'<max_pooling'+str(mp)+'.h>'+'\n')
+    elif a.find('dense')!=-1:
+        fc=fc+1
+        f.write('#include '+'<FC'+str(fc)+'.h>'+'\n')
 #s.append("#include<inference.h>\n")
-s.append("#include<weights1.h>\n")
-s.append("#include<weights2.h>\n")
 func="void inference_find(void)\n{\n"
-for i in range(2):
-    f.write(s[i])
 f.write(func)
 #load tensorflow model
-model=tf.keras.models.load_model('Synth_16_32_filt.h5')
 conv=0
 fc=0
 mp=0
