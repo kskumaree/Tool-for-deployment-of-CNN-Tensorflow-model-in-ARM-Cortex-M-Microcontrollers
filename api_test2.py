@@ -274,22 +274,40 @@ for idx in range(len(model.layers)):
         p=Wq.shape
         itr=0
         flag=0
-        for ii in range(p[0]):
-            for jj in range(p[1]):
-                for kk in range(p[2]):
-                    for ll in range(p[3]):
-                        itr+=1
-                        if(flag==0):
-                            f.write(str(int(Wq[ii,jj,kk,ll])))
-                            flag=1
-                        else:
-                            f.write(","+str(int(Wq[ii,jj,kk,ll])))
-                        if (ii==p[0]-1 and jj==p[1]-1 and kk==p[2]-1 and ll==p[3]-1):
-                            continue
-                        elif itr==100:
-                            f.write(c+nxt)
-                            flag=0
-                            itr=0
+        if cl==1:
+            for ii in range(p[0]):
+                for jj in range(p[1]):
+                    for kk in range(p[2]):
+                        for ll in range(p[3]):
+                            itr+=1
+                            if(flag==0):
+                                f.write(str(int(Wq[ii,jj,kk,ll])))
+                                flag=1
+                            else:
+                                f.write(","+str(int(Wq[ii,jj,kk,ll])))
+                            if (ii==p[0]-1 and jj==p[1]-1 and kk==p[2]-1 and ll==p[3]-1):
+                                continue
+                            elif itr==100:
+                                f.write(c+nxt)
+                                flag=0
+                                itr=0
+        else:
+            for ii in range(p[0]):
+                for jj in range(p[2]):
+                    for kk in range(p[3]):
+                        for ll in range(p[1]):
+                            itr+=1
+                            if(flag==0):
+                                f.write(str(int(Wq[ii,ll,jj,kk])))
+                                flag=1
+                            else:
+                                f.write(","+str(int(Wq[ii,ll,jj,kk])))
+                            if (ii==p[0]-1 and jj==p[2]-1 and kk==p[3]-1 and ll==p[1]-1):
+                                continue
+                            elif itr==100:
+                                f.write(c+nxt)
+                                flag=0
+                                itr=0
         f.write(close+";"+nxt)
         f.close()
     elif a.find('dense')!=-1:
