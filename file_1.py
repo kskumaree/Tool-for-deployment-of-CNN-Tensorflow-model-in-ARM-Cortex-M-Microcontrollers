@@ -27,7 +27,7 @@ def relu(f,layer):
     f.write(conv+n+und+out+und+ch)
     f.write(close+";\n")
 def convolution(f,layer):
-    arm_convolution="arm_convolve_HWC_q7_fast_nonsquare"
+    arm_convolution="arm_convolve_HWC_q7_basic_nonsquare"
     data="data"
     weight="W"
     und="_"
@@ -138,6 +138,12 @@ f.write(func)
 conv=0
 fc=0
 mp=0
+f.write("//data variable is input, dtype=int8_t\n")
+f.write("//buffer1,buffer2,buffer3 and col_buffer1 are 1D array, dtype=q7_t\n")
+f.write("//buffer2 is output of every convolution and ReLu layer, so define size with the layer size which has maximum output values\n")
+f.write("//buffer3 is output of every max pooling layer, it's size should be based on max pooling layer's maximum possible values\n")
+f.write("//col_buffer1 should be atleast the size of max(2*ch_im_in*dim_kernel*dim_kernel)\n")
+f.write("//buffer1 size should be atleast the max input length of fully connected layer\n")
 for idx in range(len(model.layers)):
     a=(model.get_layer(index=idx).name)
     if a.find('conv2d')!=-1:
