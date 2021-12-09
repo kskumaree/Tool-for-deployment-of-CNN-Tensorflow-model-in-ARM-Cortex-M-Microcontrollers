@@ -1,6 +1,3 @@
-#include "main.h"
-#define ARM_MATH_CM4
-#include "arm_math.h"
 #include "arm_const_structs.h"
 #include "arm_nnfunctions.h"
 #include <FC1.h>
