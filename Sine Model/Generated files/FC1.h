@@ -1,5 +1,6 @@
 #include  <arm_const_structs.h>
 #include  <arm_nnfunctions.h>
+float sa0=15.875;//multiply input by sa0 and give as input to inference model
 #define	IP1_IN_DIM	1
 #define	IP1_OUT_DIM	16
 #define	IP1_BIAS_LSHIFT	4
