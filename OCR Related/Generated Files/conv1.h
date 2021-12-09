@@ -1,6 +1,6 @@
 #include  <arm_const_structs.h>
 #include  <arm_nnfunctions.h>
-float sa0=127.0;//multiply input by sa0 and give as input to inference model
+float sa0=127.0;//multiply input by sa0 and give as input to inference model 
 #define CONV1_IN_y	20
 #define CONV1_IN_x	20
 #define CONV1_IN_CH	1
