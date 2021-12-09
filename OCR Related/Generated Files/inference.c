@@ -5,7 +5,7 @@
 #include <conv2.h>
 #include <max_pooling2.h>
 #include <FC1.h>
-//Copy paste the contents in the main.c file 
+//Copy paste the contents in the main.c file
 void inference_find(void)
 {
 //data variable is input 1D array, dtype=q7_t
