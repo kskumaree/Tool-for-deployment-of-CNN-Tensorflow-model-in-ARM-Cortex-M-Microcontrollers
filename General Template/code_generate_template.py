@@ -98,6 +98,9 @@ for data in datalist:
             a=np.transpose(a)
             maxval[idx][itr]=np.max(np.abs(inp))
             inp=fully_connected(b,a,inp)
+            o=(model.get_layer(index=idx).get_config()['activation'])
+            if(o=='relu'):
+                inp=relu(inp)
             maxvalout[idx][itr]=np.max(np.abs(inp))
         elif a.find('flatten')!=-1:
             inp = np.transpose(inp, (1,0,2))
