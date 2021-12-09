@@ -10,7 +10,7 @@ from PIL import Image
 import numpy as np
 from numpy import asarray
 model=tf.keras.models.load_model('0-9-A-Z_selva.h5')    
-#change the image name to get and test different inputs
+#change the image name to get and test different inputs 
 img = Image.open('157.png')
 p = asarray(img)
 [x,y]=p.shape
