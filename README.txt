@@ -1,5 +1,9 @@
 # MicroQuantization-Tool
-Automated Inference Code Generation for ARM Microcontrollers
+Implementation of an open-source framework that automatically generates inference 
+code from trained CNN models which can then be readily deployed on ARM 
+Microcontrollers.
+
+
 Follow the manual uploaded to get the procedure on deploying Neural Networks in Microcontroller
 Works for Neural Networks With
 1. Convolution layer
