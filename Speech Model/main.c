@@ -1,4 +1,4 @@
-//Program for speech recognition using half and full complete interrupt - DMA
+//Program for speech recognition using DMA
 //Basic includes
 #include "stm32f4xx.h"
 #include "main.h"
@@ -191,31 +191,30 @@ void dma_start(void)
 void digit_find(void)
 {
 	n=sizeof(XTest)/sizeof(float);
-//converting speech signal to spectrum ~28ms to execute
+//converting speech signal to spectrum
 	buffer_cr(n,windowsize,hop);
-//takes ~768ms for rest to execute
 	for(i=0;i<1248;i++){
 			data[i]=round(16*(specPT[i]-mean[i]));
 		}
-	//CL1 ~100ms to execute
+	//CL1 
 		arm_convolve_HWC_q7_basic_nonsquare(data,CONV1_IN_x,CONV1_IN_y,CONV1_IN_CH,W_1,CONV1_OUT_CH,CONV1_KER_x,CONV1_KER_y,CONV1_PAD_x,CONV1_PAD_y,CONV1_STRIDE_y,
 	      CONV1_STRIDE_x,b_1,CONV1_BIAS_LSHIFT,CONV1_OUT_RSHIFT,buffer2,CONV1_OUT_x,CONV1_OUT_y,(q15_t*)col_buffer1,NULL);
 		arm_relu_q7(buffer2,CONV1_OUT_x*CONV1_OUT_y*CONV1_OUT_CH);
 		arm_max_pool_s8_opt(MAX1_IN_y,MAX1_IN_x,MAX1_OUT_y,MAX1_OUT_x,MAX1_STRIDE_y,MAX1_STRIDE_x,MAX1_KERNEL_y,MAX1_KERNEL_x,MAX1_PAD_y,MAX1_PAD_x,MAX1_ACT_min,MAX1_ACT_max,MAX1_CHANNEL_in,buffer2,NULL,buffer3);
 
-	//CL2 ~332ms to execute
+	//CL2 
 		arm_convolve_HWC_q7_fast_nonsquare(buffer3,CONV2_IN_x,CONV2_IN_y,CONV2_IN_CH,W_2,CONV2_OUT_CH,CONV2_KER_x,CONV2_KER_y,CONV2_PAD_x,CONV2_PAD_y,CONV2_STRIDE_y,
 	      CONV2_STRIDE_x,b_2,CONV2_BIAS_LSHIFT,CONV2_OUT_RSHIFT,buffer2,CONV2_OUT_x,CONV2_OUT_y,(q15_t*)col_buffer1,NULL);
 		arm_relu_q7(buffer2,CONV2_OUT_x*CONV2_OUT_y*CONV2_OUT_CH);
 		arm_max_pool_s8_opt(MAX2_IN_y,MAX2_IN_x,MAX2_OUT_y,MAX2_OUT_x,MAX2_STRIDE_y,MAX2_STRIDE_x,MAX2_KERNEL_y,MAX2_KERNEL_x,MAX2_PAD_y,MAX2_PAD_x,MAX2_ACT_min,MAX2_ACT_max,MAX2_CHANNEL_in,buffer2,NULL,buffer3);
 
-	//CL3 ~322ms to execute
+	//CL3
 		arm_convolve_HWC_q7_fast_nonsquare(buffer3,CONV3_IN_x,CONV3_IN_y,CONV3_IN_CH,W_3,CONV3_OUT_CH,CONV3_KER_x,CONV3_KER_y,CONV3_PAD_x,CONV3_PAD_y,CONV3_STRIDE_y,
 	      CONV3_STRIDE_x,b_3,CONV3_BIAS_LSHIFT,CONV3_OUT_RSHIFT,buffer2,CONV3_OUT_x,CONV3_OUT_y,(q15_t*)col_buffer1,NULL);
 		arm_relu_q7(buffer2,CONV3_OUT_x*CONV3_OUT_y*CONV3_OUT_CH);
 		arm_max_pool_s8_opt(MAX3_IN_y,MAX3_IN_x,MAX3_OUT_y,MAX3_OUT_x,MAX3_STRIDE_y,MAX3_STRIDE_x,MAX3_KERNEL_y,MAX3_KERNEL_x,MAX3_PAD_y,MAX3_PAD_x,MAX3_ACT_min,MAX3_ACT_max,MAX3_CHANNEL_in,buffer2,NULL,buffer3);
 
-	//FC1 ~14ms to execute
+	//FC1
 		arm_fully_connected_q7(buffer3,wf_1,IP1_IN_DIM,IP1_OUT_DIM,IP1_BIAS_LSHIFT,IP1_OUT_RSHIFT,bf_1,FC1_OUT,buffer1);
 		max_fout=FC1_OUT[0];
 	loc=0;
@@ -276,16 +275,7 @@ int main ()
 			{
 				XTest[o]=((float)value[o]-128)*step;
 			}
-//			detrend=0;
-//			for(int i=0;i<8000;i++){
-//			detrend+=value[i];
-//			}
-//			detrend=detrend/8000.0;
-
-//			for(int i=0;i<8000;i++){
-//			XTest[i]=value[i]-detrend;
-//			}
-			//Implement CNN ~803ms to execute
+			//Implement CNN
 			digit_find();
 			GPIOD->ODR ^=(1UL<<13);//Toggle LED
 //			flag=0;
@@ -300,16 +290,7 @@ int main ()
 			{
 				XTest[i]=((float)value1[i]-128)*step;
 			}
-//			detrend=0;
-//			for(int i=0;i<8000;i++){
-//			detrend+=value1[i];
-//			}
-//			detrend=detrend/8000.0;
-//
-//			for(int i=0;i<8000;i++){
-//			XTest[i]=value1[8000]-detrend;
-//			}
-			//Implement CNN ~803ms to execute
+			//Implement CNN
 			digit_find();
 			GPIOD->ODR ^=(1UL<<13);//Toggle LED
 			flag=0;
